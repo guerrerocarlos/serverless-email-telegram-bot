@@ -1,0 +1,36 @@
+{
+  "name": "serverless-ses-telegram-client",
+  "version": "0.0.1",
+  "description": "Use telegram as email client for many domains with AWS SES",
+  "main": "handler.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/guerrerocarlos/serverless-ses-telegram-client"
+  },
+  "keywords": [
+    "serverless",
+    "ses",
+    "telegram",
+    "secure",
+    "client"
+  ],
+  "author": "Carlos Guerrero <guerrerocarlos@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "ava": "^0.25.0"
+  },
+  "dependencies": {
+    "@sendgrid/mail": "^6.2.1",
+    "chalk": "^2.4.1",
+    "libmime": "^3.1.0",
+    "mailparser-mit": "^0.6.2",
+    "markdown-escape": "^1.0.2",
+    "node-telegram-bot-api": "^0.30.0",
+    "pretty-bytes": "^5.1.0",
+    "quoted-printable": "^1.0.1",
+    "utf8": "^3.0.0"
+  }
+}

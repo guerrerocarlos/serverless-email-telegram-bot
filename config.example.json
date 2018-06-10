@@ -1,0 +1,15 @@
+{
+    "emailBucket": "examplebucket",
+    "blacklistS3File": {
+        "Bucket": "examplebucket",
+        "Key": "config/blacklist.json"
+    },
+    "emailKeyPrefix": "email/",
+    "telegram": "TELEGRAM-BOT-API-KEY-HERE",
+    "userId": "GET yout USERID by taking to @useridbot in telegram and put it here",
+    "maxTelegramSize": 4000,
+    "publicS3URL": "http://examplebucket.s3-website-us-east-1.amazonaws.com/",
+    "sendgridKey": "SG.SENDGRIDKEY",
+    "telegramHook": "https://xxxxxxx.execute-api.us-east-1.amazonaws.com/dev/hook",
+    "viewUrl": "https://xxxxxxx.execute-api.us-east-1.amazonaws.com/dev/view"
+}

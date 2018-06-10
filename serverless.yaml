@@ -1,0 +1,108 @@
+
+service: sls-ses
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  environment:
+    GW_URL: { "Fn::Join" : ["", [ "https://", { "Ref" : "ApiGatewayRestApi" }, ".execute-api.${opt:region, self:provider.region}.amazonaws.com/${opt:stage, self:provider.stage}" ] ]  }
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "ses:SendRawEmail"
+      Resource: "*"
+    - Effect: "Allow"
+      Action: 
+        - s3:GetObject
+        - s3:PutObject
+      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "SesForwarderBucket" }, "/*" ] ]  }
+
+functions:
+  telegramBot:
+    role: LambdaRole
+    handler: handler.ses
+    timeout: 10
+    memorySize: 128
+    environment:
+      emailBucket: 
+         Ref: SesForwarderBucket
+
+  telegramBotButtons:
+    role: LambdaRole
+    handler: handler.telegram
+    timeout: 10
+    memorySize: 128
+    events:
+    - http:
+        path: hook
+        method: post
+    - http:
+        path: hook
+        method: get
+  downloadFile:
+    role: LambdaRole
+    handler: handler.view
+    timeout: 10
+    memorySize: 128
+    events:
+    - http:
+        path: view
+        method: get
+    environment:
+      emailBucket: 
+         Ref: SesForwarderBucket
+
+resources:
+  Resources:
+    SesForwarderBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: 
+          Fn::Join: ["", ["sesforwarder-",{ "Ref" : "AWS::AccountId" }  ] ]
+        LifecycleConfiguration:
+          Rules:
+            - ExpirationInDays: 3
+              Status: Enabled
+
+    SesForwarderBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: 
+          Ref: SesForwarderBucket
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Sid: GiveSESPermissionToWriteEmail
+            Effect: Allow
+            Principal:
+              Service: ses.amazonaws.com
+            Action: s3:PutObject
+            Resource: 
+              Fn::Join: ["", ["arn:aws:s3:::",{"Ref":"SesForwarderBucket" },"/*"]]
+            Condition:
+              StringEquals:
+                aws:Referer:
+                    Ref: AWS::AccountId   
+     
+    LambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+
+Outputs:
+  SesForwarderBucket:
+    Description: "Forwarder Bucket Name"
+    Value:
+        Ref: SesForwarderBucket
