@@ -1,5 +1,5 @@
 {
-  "name": "serverless-ses-telegram-client",
+  "name": "serverless-email-telegram-bot",
   "version": "0.0.1",
   "description": "Use telegram as email client for many domains with AWS SES",
   "main": "handler.js",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "github.com/guerrerocarlos/serverless-ses-telegram-client"
+    "url": "github.com/guerrerocarlos/serverless-email-telegram-client"
   },
   "keywords": [
     "serverless",
