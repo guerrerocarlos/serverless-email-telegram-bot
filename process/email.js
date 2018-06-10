@@ -26,7 +26,6 @@ class Email {
             this.metadata = {}
             this.recipients = event.Records[0].ses.receipt.recipients
             event.Records[0].ses.mail.headers.forEach((header) => {
-                console.log(chalk.cyan(header.name), header.value, header.name === 'Content-Type' ? chalk.green('good') : chalk.red('nope'), header.value.indexOf('multipart') > -1 ? chalk.green('good') : chalk.red('nope'))
                 if (header.name === 'Content-Type' && header.value.indexOf('multipart') > -1) {
                     this.multipart = header.value.split('boundary=')[1]
                 }
@@ -40,7 +39,6 @@ class Email {
     }
 
     getBody(messageId) {
-        console.log('getBody', messageId)
         var self = this
         return new Promise((resolve, reject) => {
             self.s3.copyObject({
@@ -82,7 +80,6 @@ class Email {
 
                     mailparser.on("end", function (mail) {
                         self.parsedBody = mail;
-                        console.log(chalk.green('parsed'), self.parsedBody)
                         resolve()
                     });
 
@@ -99,32 +96,18 @@ class Email {
     }
 
     telegramFormat() {
-        // return 'mu'
         var formatted = ''
-        // return 'mu'
         if (this.multipart) {
             formatted = this.body.split(this.multipart)
             formatted = formatted[2].split('\r\n\r\n')
             formatted.shift()
-            // console.log(formatted)
         } else {
             formatted = this.body.split('\r\n\r\n')
             formatted.shift()
 
         }
-        console.log('formatted', formatted)
         var body = formatted.join('\r\n\r\n')
-        console.log('body1', chalk.red.yellow(body))
-
-        // body = body.replace(new RegExp('<', 'g'), '[').replace(new RegExp('>', 'g'), ']')
-        // body = nomarkdown(body)
-        // console.log('body2', chalk.yellow(body))
-        // var content = ''
-        // try {
-        //     content = utf8.decode(quotedPrintable.decode((body.length < this.config.maxTelegramSize ? body : (body.slice(0, 4000)) + ' <i>[Incomplete]</i>')))
-        // } catch(er) {
         var content = (((body.length < this.config.maxTelegramSize ? body : (body.slice(0, 4000)) + ' <i>[Incomplete]</i>')))
-        // }
 
         body = body.replace(new RegExp('<', 'g'), '[').replace(new RegExp('>', 'g'), ']')
 
@@ -133,8 +116,6 @@ class Email {
             '<i>' + this.metadata.Subject + '</i>\r\n\r\n' +
             content +
             '\r\n📬<b>' + this.metadata.To.replace(new RegExp('<', 'g'), '\[').replace(new RegExp('>', 'g'), '\]') + '</b>\r\n'
-        console.log('result', result)
-        console.log(chalk.red(result.slice(70, 80)))
         return result
     }
 }

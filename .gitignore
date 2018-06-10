@@ -1,0 +1,6 @@
+.serverless
+node_modules
+config.json
+test.js
+tests/
+*.lock

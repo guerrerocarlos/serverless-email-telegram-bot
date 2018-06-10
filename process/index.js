@@ -9,7 +9,6 @@ const s3 = new AWS.S3({
 
 var blacklist = []
 s3.getObject(config.blacklistS3File, function (err, data) {
-    console.log('blacklist data:', data)
     blacklist = JSON.parse(data.Body.toString())
 });
 
@@ -17,7 +16,6 @@ var receiver = new Receiver(config)
 var telegram = new Telegram(config)
 
 function redirectTo(callback, url) {
-    console.log('<redirectTo>', url)
     return new Promise((success, reject) => {
         callback(null, {
             statusCode: 302,

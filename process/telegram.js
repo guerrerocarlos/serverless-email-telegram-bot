@@ -9,7 +9,6 @@ function saveBlacklist(params, blacklist){
 
     params.Body = JSON.stringify(Array.from(new Set(blacklist)))
 
-    console.log((JSON.stringify(params, null, 2)))
     s3.putObject(params, function (err, data) {
         console.log('PUT', err, data)
     });
@@ -23,7 +22,7 @@ class Telegram {
             cancellation: true
         });
         this.bot.setWebHook(this.config.telegramHook).then(function (a, b, c) {
-            console.log('hooked:', a, b, c)
+            // console.log('hooked:', a, b, c)
         })
     }
 
@@ -58,7 +57,6 @@ class Telegram {
                 self.bot['send' + type](this.config.userId, eachAttachment.content, {}, { filename: eachAttachment.fileName, contentType: eachAttachment.contentType });
             }
         })
-        console.log('inline_keyboard', JSON.stringify(inline_keyboard, null, 2))
         this.bot.sendMessage(this.config.userId, email.telegramFormat(), {
             reply_markup: {
                 inline_keyboard: inline_keyboard
@@ -66,12 +64,11 @@ class Telegram {
             parse_mode: "HTML",
             disable_web_page_preview: true
         }).then((result) => {
-            console.log('result', result)
+            // console.log('result', result)
         })
     }
 
     buttonPressed(event, blacklist) {
-        console.log('[buttonPressed]', JSON.stringify(event, null, 2))
         var self = this
         return new Promise((resolve, reject) => {
             if (event.callback_query) {
@@ -86,13 +83,11 @@ class Telegram {
                         ]
                         blacklist.push(email)
                         saveBlacklist(this.config.blacklistS3File, blacklist)
-                        console.log('event:', JSON.stringify(event, null, 2))
                         var params = {
                             chat_id: event.callback_query.message.chat.id,
                             message_id: event.callback_query.message.message_id,
                             reply_markup: { inline_keyboard: inline_keyboard }
                         }
-                        console.log('params', params)
                         this.bot.editMessageText('❌ ' + email + ' Blacklisted', params).then(resolve)
                         break;
                     case 'whitelist':
@@ -109,7 +104,6 @@ class Telegram {
                         }
                         saveBlacklist(this.config.blacklistS3File, blacklist)
 
-                        console.log('params', params)
                         this.bot.editMessageText('✅ ' + email + ' Whitelisted', params).then(resolve)
                         break;
                 }

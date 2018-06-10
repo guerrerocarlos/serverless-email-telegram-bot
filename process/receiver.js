@@ -35,7 +35,6 @@ class Receiver {
     }
 
     saveToS3(filename, content) {
-        console.log('saveToS3', filename, content)
         var self = this
         return new Promise((resolve, reject) => {
             var params = {
@@ -44,7 +43,6 @@ class Receiver {
                 Key: filename,
                 ACL: "public-read"
             };
-            console.log(chalk.green(JSON.stringify(params, null, 2)))
             s3.putObject(params, function (err, data) {
                 console.log('PUT', err, data)
                 if (err) console.log(err, err.stack);
