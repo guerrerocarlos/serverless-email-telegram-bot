@@ -2,7 +2,7 @@
  
 > Telegram Email Client for multiple domains, using AWS SES (Simple Email Service) and AWS Lambda
 
-Self-hosted bot similar to @GmailBot
+Self-hosted email service and (Telegram) client similar to [@GmailBot](http://t.me/gmailbot)
 
 ## Installation
 
