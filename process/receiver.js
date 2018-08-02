@@ -5,7 +5,6 @@ const s3 = new AWS.S3({
 })
 const chalk = require('chalk')
 
-
 class Receiver {
     constructor(config) {
         this.config = config
@@ -16,10 +15,22 @@ class Receiver {
             var email = new Email(this.config, s3)
             email.setEvent(event)
             email.getBody().then(() => {
-                if(blacklist.indexOf(email.parsedBody.from[0].address) > -1){
-                    reject()
-                } else {
-                    resolve(email)
+                // console.log(chalk.green('email.parsedBody'), JSON.stringify(email.parsedBody))
+                // console.log(chalk.green('email.parsedBody.text'), email.parsedBody.text)
+                try {
+                    if (blacklist.indexOf(email.parsedBody.from[0].address.toLowerCase()) > -1 ||
+                        blacklist.indexOf(email.parsedBody.from[0].address.toLowerCase().split('@')[1]) > -1 ||
+                        email.parsedBody.replyTo && blacklist.indexOf(email.parsedBody.replyTo[0].address.toLowerCase()) > -1 ||
+                        email.parsedBody.replyTo && blacklist.indexOf(email.parsedBody.replyTo[0].address.toLowerCase().split('@')[1]) > -1
+                    ) {
+                        console.log('reject!')
+                        reject()
+                    } else {
+                        console.log('resolve!')
+                        resolve(email)
+                    }
+                } catch (err) {
+                    reject(err)
                 }
             })
         })

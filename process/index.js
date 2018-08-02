@@ -8,9 +8,14 @@ const s3 = new AWS.S3({
 })
 
 var blacklist = []
-s3.getObject(config.blacklistS3File, function (err, data) {
-    blacklist = JSON.parse(data.Body.toString())
-});
+function getBlacklist(cb) {
+    // TODO: add cache here
+    s3.getObject(config.blacklistS3File, function (err, data) {
+        blacklist = JSON.parse(data.Body.toString())
+        console.log('blacklist loaded', blacklist)
+        if (cb) cb()
+    });
+}
 
 var receiver = new Receiver(config)
 var telegram = new Telegram(config)
@@ -27,14 +32,19 @@ function redirectTo(callback, url) {
 }
 
 exports.ses = function (event, callback) {
-    receiver.receive(event, blacklist)
-        .then(telegram.deliver.bind(telegram))
-        .then(callback)
+    getBlacklist(() => {
+        receiver.receive(event, blacklist)
+            .then(telegram.deliver.bind(telegram))
+            .then(callback)
+            .catch(callback)
+    })
 }
 
 exports.telegramButton = function (event, callback) {
-    telegram.buttonPressed(event, blacklist)
-        .then(callback)
+    console.log('current blacklist:', blacklist)
+    getBlacklist(() => {
+        telegram.buttonPressed(event, blacklist, callback)
+    })
 }
 
 exports.view = function (event, callback) {

@@ -25,22 +25,24 @@ class Email {
             this.email = event.Records[0].ses.mail
             this.metadata = {}
             this.recipients = event.Records[0].ses.receipt.recipients
+            this.receipt = event.Records[0].ses.receipt
             event.Records[0].ses.mail.headers.forEach((header) => {
                 if (header.name === 'Content-Type' && header.value.indexOf('multipart') > -1) {
                     this.multipart = header.value.split('boundary=')[1]
                 }
                 this.metadata[header.name] = header.value
             })
-            if (this.multipart) {
-                this.multipart = this.multipart.replace(/\"/g, '')
-            }
-            console.log(chalk.green('this.multipart:', this.multipart))
+            // if (this.multipart) {
+            //     this.multipart = this.multipart.replace(/\"/g, '')
+            // }
+            // console.log(chalk.green('this.multipart:', this.multipart))
         }
     }
 
     getBody(messageId) {
         var self = this
         return new Promise((resolve, reject) => {
+            messageId = (messageId ? messageId : self.email.messageId)
             self.s3.copyObject({
                 Bucket: self.config.emailBucket,
                 CopySource: self.config.emailBucket + '/' + self.config.emailKeyPrefix +
@@ -78,8 +80,14 @@ class Email {
                     self.body = result.Body.toString();
                     var mailparser = new MailParser();
 
-                    mailparser.on("end", function (mail) {
-                        self.parsedBody = mail;
+                    mailparser.on("end", function (email) {
+                        self.parsedBody = email;
+                        self.messageId = messageId;
+                        console.log('TO', self.parsedBody.to)
+                        console.log('FROM', self.parsedBody.from)
+                        self.to = self.parsedBody.to//[0].address
+                        self.subject = self.parsedBody.subject
+                        self.from = self.parsedBody.from//[0].address
                         resolve()
                     });
 
@@ -95,28 +103,94 @@ class Email {
         return this.parsedBody.attachments ? this.parsedBody.attachments : []
     }
 
-    telegramFormat() {
+    telegramFormat(full) {
         var formatted = ''
-        if (this.multipart) {
-            formatted = this.body.split(this.multipart)
-            formatted = formatted[2].split('\r\n\r\n')
-            formatted.shift()
-        } else {
-            formatted = this.body.split('\r\n\r\n')
-            formatted.shift()
 
+        var body = this.parsedBody.text
+        var html = this.parsedBody.html
+        if (body === undefined) {
+
+            const cheerio = require('cheerio');
+            // var strip = require('strip')
+            // var strip2 = require('remove-html-comments')
+
+            const $ = cheerio.load(this.parsedBody.html);
+            $('head').remove()
+
+            // console.log(chalk.cyan('body'), this.parsedBody)
+            // body = strip(strip2($.html()).data)
+            // body = strip($.html())
+            body = $.text()
+            body = body.split(/\n+\t*\s*/g).join('\r\n')
+            console.log(chalk.cyan('body'), body)
+            // body = body.replace(/[\n\r]+/, "\n")
+            // body = body.replace(/[\s]+/, " ")
+            // console.log(chalk.yellow('body'), $.text())
         }
-        var body = formatted.join('\r\n\r\n')
-        var content = (((body.length < this.config.maxTelegramSize ? body : (body.slice(0, 4000)) + ' <i>[Incomplete]</i>')))
+        // var bodyPieces = body.html.split('\n')
+        // body = bodyPieces.slice(0, 10).join('\n')
+        // var body = this.parsedBody.html
+        console.log(chalk.red('body'), body)
+        // console.log(chalk.cyan(body))
 
-        body = body.replace(new RegExp('<', 'g'), '[').replace(new RegExp('>', 'g'), ']')
+        try {
+            var content = (((body.length < this.config.maxTelegramSize ? body : (body.slice(0, 3850)) + ' [Incomplete]')))
+
+            content = content.replace(new RegExp('<', 'g'), '\[').replace(new RegExp('>', 'g'), '\]')
+
+            console.log(chalk.yellow(body))
+
+            var flagged = []
+            var typesOfFlags = ['spamVerdict', 'virusVerdict', 'spfVerdict', 'dkimVerdict', 'dmarcVerdict']
+            typesOfFlags.forEach((flagName) => {
+                if (this.receipt) {
+                    if (this.receipt[flagName].status === 'PASS') {
+                        flagged.push('⚪')
+                    } else {
+                        flagged.push('🔴')
+                    }
+                }
+            })
+            console.log('FROM:', this.parsedBody.from)
+            content = (full ? content : (content.split('\n').slice(0, 8).join('\n') + '\n...'))
+            console.log('body2', content)
+            // console.log('this.parsedBody', JSON.stringify(this.parsedBody))
+            console.log('this.metadata', this.metadata)
+            var result = '✉️ <b>' + this.parsedBody.from[0].name + ' ('+ this.parsedBody.from[0].address + ')</b> \r\n' +
+                '<i>' + this.parsedBody.subject + '</i>\r\n\r\n' +
+                content +
+                '\r\n🆔 ' + this.messageId + '.' + flagged.join(' ') +
+                '\r\n📬<b>' + this.parsedBody.to[0].name + ' (' + this.parsedBody.to[0].address + ')</b>\r\n'
+            console.log(chalk.green('result...'), chalk.green(result))
+            console.log(chalk.blue(result.length))
+        } catch (er) {
+            console.log(er)
+        }
 
 
-        var result = '✉️ <b>' + this.metadata.From.replace(new RegExp('<', 'g'), '\[').replace(new RegExp('>', 'g'), '\]') + '</b> \r\n' +
-            '<i>' + this.metadata.Subject + '</i>\r\n\r\n' +
-            content +
-            '\r\n📬<b>' + this.metadata.To.replace(new RegExp('<', 'g'), '\[').replace(new RegExp('>', 'g'), '\]') + '</b>\r\n'
-        return result
+
+        var blacklistEmailers = []
+        var blacklistEmails = []
+        blacklistEmailers.push(this.parsedBody.from[0].address.toLowerCase())
+        if (this.parsedBody.replyTo) {
+            blacklistEmailers.push(this.parsedBody.replyTo[0].address.toLowerCase())
+        }
+        console.log('blacklistEmailers', blacklistEmailers)
+
+
+        blacklistEmailers.forEach((sourceEmail) => {
+            if (sourceEmail.length < 33) {
+                if (blacklistEmails.indexOf(sourceEmail) == -1) {
+                    blacklistEmails.push(sourceEmail)
+                }
+            }
+
+            if (blacklistEmails.indexOf(sourceEmail.split('@')[1]) == -1) {
+                blacklistEmails.push(sourceEmail.split('@')[1])
+            }
+        })
+
+        return { text: result, html: html, plain: body, blacklistEmails: blacklistEmails }
     }
 }
 
