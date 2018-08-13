@@ -142,17 +142,22 @@ class Email {
 
             var flagged = []
             var typesOfFlags = ['spamVerdict', 'virusVerdict', 'spfVerdict', 'dkimVerdict', 'dmarcVerdict']
+            var badFlagsCount = 0
             typesOfFlags.forEach((flagName) => {
                 if (this.receipt) {
                     if (this.receipt[flagName].status === 'PASS') {
                         flagged.push('⚪')
                     } else {
                         flagged.push('🔴')
+                        badFlagsCount++
                     }
                 }
             })
             console.log('FROM:', this.parsedBody.from)
-            content = (full ? content : (content.split('\n').slice(0, 8).join('\n') + '\n...'))
+            content = (full ? content : (content.split('\n').slice(0, 4).join('\n') + '\n...'))
+            if(badFlagsCount >= 3){
+                content = '...'
+            }
             console.log('body2', content)
             // console.log('this.parsedBody', JSON.stringify(this.parsedBody))
             console.log('this.metadata', this.metadata)
